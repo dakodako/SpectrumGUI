@@ -1,7 +1,7 @@
 # HyperSens spectrometer software
 
 ### Requirement
-1. Python 3.x
+1. Python 3.11
 2. PyQt5
 3. numpy
 4. matplotlib
