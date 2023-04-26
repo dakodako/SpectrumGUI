@@ -1,10 +1,11 @@
 String incomingByte;    
-#define LED_PIN 9
+#define LED_PIN 8
 void setup() {
 
   Serial.begin(9600);
 
   pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
 
 }
 void loop() {
