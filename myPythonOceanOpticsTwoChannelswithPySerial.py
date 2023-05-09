@@ -24,6 +24,7 @@ from matplotlib.figure import Figure
 import pyqtgraph as pg
 from datetime import datetime
 import serial
+import serial.tools.list_ports
 
 
 import sys
@@ -34,6 +35,10 @@ import queue
 
 save_counter = 0
 
+ports = list(serial.tools.list_ports.comports())
+for p in ports:
+    if "Arduino" in p.description:
+        port = p[0]
 
 pg.setConfigOption('background', 'k')
 pg.setConfigOption('foreground', 'k')
@@ -123,7 +128,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_13.clicked.connect(self.setScansToAvg)
         ######### number of measurememnts saved #######
         # self.ui.pushButton_22.clicked.connect(self.setMeasNumE)
-        self.ui.pushButton_23.clicked.connect(self.setMeasNum)
+        self.ui.pushButton_23.clicked.connect(self.setMeasNum2)
         ######### Quit program ########
         self.ui.pushButton.clicked.connect(self.close_application) # quit button
         ######### optimize integration time #########
@@ -149,8 +154,8 @@ class MainWindow(QtWidgets.QMainWindow):
         ######### Save ########
         # self.ui.pushButton_10.setCheckable(True)
         # self.ui.pushButton_10.clicked.connect(self.saveSpectra)
-        self.ui.pushButton_17.clicked.connect(self.saveSpectra3)
-        self.ui.pushButton_20.clicked.connect(self.saveSpectra2)
+        self.ui.pushButton_17.clicked.connect(self.saveSpectraOne)
+        self.ui.pushButton_20.clicked.connect(self.saveSpectra4)
         ######### Plots ########
         titles = ['Raw L', 'Raw E', 'Dark', 'Calibrated L (full)', 'Calibrated E (full)', 'Reflectance (full)', 'Calibrated L (A-B)','Calibrated E (A-B)', 'Reflectance (A-B)']
         self.canvases = []
@@ -224,8 +229,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.backgroundIntensity = None  
         self.calib_file_name_E = None 
         self.calib_file_name_L = None 
-        self.intensity_E_buffersize = 1
-        self.intensity_L_buffersize = 1
+        self.intensity_buffersize = 1
+        # self.intensity_L_buffersize = 1
         self.updateRate = 50 # millisecond
         self.timer = QtCore.QTimer()
         self.timer.setInterval(self.updateRate)
@@ -329,18 +334,18 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.processEvents()
                 self.intensity, self.dark_mean = self.getSpectra(correct_dark_counts=self.correct_dark_counts, correct_nonlinearity=self.correct_nonlinearity)
                 if self.if_L:
-                    self.intensity_L_queue.pop(0)
-                    self.intensity_L_queue.append([a- b for a,b in zip(self.intensity,self.backgroundIntensity)])
+                    # self.intensity_L_queue.pop(0)
+                    # self.intensity_L_queue.append([a- b for a,b in zip(self.intensity,self.backgroundIntensity)])
                     # for i in range(0,self.intensity_L_buffersize):
                     #     self.intensity = self.getSpectra()
                     #     self.intensity_L_buffer[:,i] = self.intensity
                     self.intensity_L = [a-b for a,b in zip(self.intensity, self.backgroundIntensity)]
                 else:
-                    curr_time = datetime.now().strftime("%H:%M:%S:%f")
-                    self.intensity_E_time_queue.pop(0)
-                    self.intensity_E_time_queue.append(curr_time)
-                    self.intensity_E_queue.pop(0)
-                    self.intensity_E_queue.append([a- b for a,b in zip(self.intensity,self.backgroundIntensity)])
+                    # curr_time = datetime.now().strftime("%H:%M:%S:%f")
+                    # self.intensity_E_time_queue.pop(0)
+                    # self.intensity_E_time_queue.append(curr_time)
+                    # self.intensity_E_queue.pop(0)
+                    # self.intensity_E_queue.append([a- b for a,b in zip(self.intensity,self.backgroundIntensity)])
                     # for i in range(0,self.intensity_E_buffersize):
                     #     self.intensity = self.getSpectra()
                     #     self.intensity_E_buffer[:,i] = self.intensity
@@ -371,6 +376,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setEnabled(False)
         self.ui.pushButton_17.setEnabled(False)
         self.ui.pushButton_20.setEnabled(False)
+        self.ui.checkBox.setEnabled(False)
+        self.ui.checkBox_3.setEnabled(False)
+        self.ui.checkBox_4.setEnabled(False)
         for i in range(0,9):
             # print("Close canvas")
             self.canvases[i].axes.clear()
@@ -396,6 +404,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setEnabled(True)
         self.ui.pushButton_20.setEnabled(True)
         self.ui.pushButton_17.setEnabled(True)
+        self.ui.checkBox.setEnabled(True)
+        self.ui.checkBox_3.setEnabled(True)
+        self.ui.checkBox_4.setEnabled(True)
         pg.QtGui.QGuiApplication.processEvents() 
         if self.if_L is not True:
             self.reference_plots[0].set_alpha(0.4)
@@ -447,91 +458,176 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.applyCalibE = True
         # calibFile.close()
-    def saveSpectra2(self):
-        # acquire n - 1 future measurements
-        intensityL_temp_buffer = np.empty([len(self.wavelength), self.intensity_L_buffersize])
+    def saveSpectraOne(self):
+        self.serialcomm.write('on'.encode())
+        self.ui.lineEdit_2.setText("Radiance saving")
+        time.sleep(2)
+        curr_time_L = datetime.now().strftime("%H:%M:%S:%f")
+        intensityL, dark_temp = self.getSpectra(correct_dark_counts=self.correct_dark_counts, correct_nonlinearity=self.correct_nonlinearity)
+        winsound.Beep(500,100)
+        self.serialcomm.write('off'.encode())
+        self.ui.lineEdit_2.setText("Irradiance saving")
+        time.sleep(2)
+        curr_time_E = datetime.now().strftime("%H:%M:%S:%f")
+        intensityE, dark_temp = self.getSpectra(correct_dark_counts=self.correct_dark_counts, correct_nonlinearity=self.correct_nonlinearity)
+        winsound.Beep(500,100)
+        intensityE_calib = np.multiply(intensityE, self.calibCoeff_E)
+        intensityL_calib = np.multiply(intensityL, self.calibCoeff_L)
+        reflectance = self.getReflectance(intensityE, intensityL)
+        control_info = "Integration time (ms) (L): " + str(self.int_time_L/1000) + ", Integration time (ms) (E): " + str(self.int_time_E/1000) + ", Scans to average (L): " + str(self.scans_to_avg_L) + ", Scans to average (E): " + str(self.scans_to_avg_E) + '\n'
+        header_info = "Wavelength, Time (L), Intensity (L), intensity calibrated (L), Time (L), Intensity (E), Intensity calibrated (L), Background, Reflectance " + control_info
+        filename = self.directoryPath + '\\'+self.ui.lineEdit_14.text() + '_'+self.spec.model+'_'+str(self.save_counter)+'_'+ datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+'.txt'
+        outfile = open(filename,'w')
+        outfile.write(header_info)
+        for idx in range(0, len(self.wavelength)):
+            outfile.write(str(round(self.wavelength[idx],4)) + ',' + curr_time_L + ',' + str(round(intensityL[idx],2)) + ',' + str(round(intensityL_calib[idx],2)) + ',' + curr_time_E + ','+ str(round(intensityE[idx],2)) + ',' + str(round(intensityE_calib[idx],2)) + ',' + str(round(self.backgroundIntensity[idx],2)) + ',' + str(round(reflectance[idx],2)) + '\n')
+        outfile.close()
+        winsound.Beep(1000,300)
+        self.save_counter = self.save_counter + 1
+
+
+    def saveSpectra4(self):
+        intensityL_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
+        intensityE_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
+        intenstiyE_temp_time_buffer = []
         intensityL_temp_time_buffer = []
-        for i in range(0, self.intensity_L_buffersize):
+        for i in range(0, self.intensity_buffersize):
+            
+            self.serialcomm.write('on'.encode())
+            time.sleep(2)
+            self.ui.lineEdit_2.setText("Radiance channel saving")
             curr_time = datetime.now().strftime("%H:%M:%S:%f")
             intensityL_temp_time_buffer.append(curr_time)
             IntensityL_temp, dark_temp = self.getSpectra(correct_dark_counts = self.correct_dark_counts, correct_nonlinearity=self.correct_nonlinearity)
             intensityL_temp_buffer[:,i] = [a-b for a, b in zip(IntensityL_temp, self.backgroundIntensity)]
-            # print("Save measurement")
             winsound.Beep(500,100)
-        reference_percentage = 100
+            
+            self.serialcomm.write('off'.encode())
+            time.sleep(2)
+            self.ui.lineEdit_2.setText("Irradiance channel saving")
+            curr_time = datetime.now().strftime("%H:%M:%S:%f")
+            intenstiyE_temp_time_buffer.append(curr_time)
+            IntensityE_temp, dark_temp = self.getSpectra(correct_dark_counts = self.correct_dark_counts, correct_nonlinearity=self.correct_nonlinearity)
+            intensityE_temp_buffer[:,i] = [a-b for a, b in zip(IntensityE_temp, self.backgroundIntensity)]
+            winsound.Beep(500,100)
         control_info = "Integration time (L): " + str(self.int_time_L) + ", Integration time (E): " + str(self.int_time_E) + ", Scans to average (L): " + str(self.scans_to_avg_L) + ", Scans to average (E): " + str(self.scans_to_avg_E) + '\n'
         filename = self.directoryPath + '\\'+self.ui.lineEdit_14.text() + '_'+self.spec.model+'_'+str(self.save_counter)+'_'+ datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+'.txt'
         outfile = open(filename,'w')
         headerInfo = "Wavelength (nm)" + ","
         # + "Intensity 1 (L)," + "Intensity 1 calibrated (L)," + "Intensity 1 (E)," + "Intensity 1 calibrated (E)," + "Intensity 2 (L)," + "Intensity 2 calibrated (L)," + "Intensity 2 (E)," + "Intensity 2 calibrated (E),"+ "Intensity 3 (L)," + "Intensity 3 calibrated (L),"+ "Intensity 3 (E)," + "Intensity 3 calibrated (E),"+ "Intensity 4 (L)," + "Intensity 4 calibrated (L),"+ "Intensity 4 (E)," + "Intensity 4 calibrated (E),"+ "Intensity 5 (L)," + "Intensity 5 calibrated (L),"+ "Intensity 5 (E)," + "Intensity 5 calibrated (E),"+ "Reflectance," + "Background\n"
-        for j in range(0, self.intensity_L_buffersize):
-            headerInfo = headerInfo + "Time ("+str(i+1) +")," + "Intensity "+str(i+1)+" (L)," + "Intensity "+str(i+1)+" calibrated (L)," 
-        for i in range(0, self.intensity_E_buffersize):
+        for j in range(0, self.intensity_buffersize):
+            headerInfo = headerInfo + "Time ("+str(j+1) +")," + "Intensity "+str(j+1)+" (L)," + "Intensity "+str(j+1)+" calibrated (L)," 
+        for i in range(0, self.intensity_buffersize):
             headerInfo = headerInfo + "Time ("+str(i+1) +")," +"Intensity "+str(i+1)+" (E)," + "Intensity "+str(i+1)+" calibrated (E)," + "Reflectance " + str(i+1)+","
         headerInfo = headerInfo + "Background, " + control_info + "\n"
         outfile.write(headerInfo)
         for n in range(0, len(self.wavelength)):
             lineInput = str(self.wavelength[n]) + ','
-            for j in range(0, self.intensity_E_buffersize):
-                intensityE_calib = self.intensity_E_queue[j][n] * self.calibCoeff_E[n]
-                lineInput = lineInput + self.intensity_E_time_queue[j] + ','+ str(round(self.intensity_E_queue[j][n])) + ',' + str(round(intensityE_calib)) + ','
-            for i in range(0, self.intensity_L_buffersize):
+            for j in range(0, self.intensity_buffersize):
+                intensityE_calib = intensityE_temp_buffer[n,j] * self.calibCoeff_E[n]
+                lineInput = lineInput + intenstiyE_temp_time_buffer[j] + ','+ str(round(intensityE_temp_buffer[n,j])) + ',' + str(round(intensityE_calib)) + ','
+            for i in range(0, self.intensity_buffersize):
                 # intensityL_calib = self.intensity_L_queue[i][n] * self.calibCoeff_L[n]
                 intensityL_calib = intensityL_temp_buffer[n,i] * self.calibCoeff_L[n]
-                if (self.intensity_E_buffersize == 0):
-                    reflectance = intensityL_calib/((self.intensity_E_queue[0][n] * self.calibCoeff_E[n])/(reference_percentage/100))
+                reference_percentage = 100
+                if (self.intensity_buffersize == 1):
+                    reflectance = intensityL_calib/((intensityE_temp_buffer[n,0] * self.calibCoeff_E[n])/(reference_percentage/100))
                 else:
-                    reflectance = intensityL_calib/((self.intensity_E_queue[round(self.intensity_E_buffersize/2)][n] * self.calibCoeff_E[n])/(reference_percentage/100))
-                # lineInput = lineInput + str(round(self.intensity_L_queue[i][n])) + ',' + str(round(intensityL_calib)) + ',' + str(round(self.intensity_E_queue[i][n])) + ',' + str(round(intensityE_calib)) + ',' + str(round(reflectance)) + ','
+                    reflectance = intensityL_calib/((intensityE_temp_buffer[n,round(self.intensity_buffersize/2)] * self.calibCoeff_E[n])/(reference_percentage/100))
+    #             # lineInput = lineInput + str(round(self.intensity_L_queue[i][n])) + ',' + str(round(intensityL_calib)) + ',' + str(round(self.intensity_E_queue[i][n])) + ',' + str(round(intensityE_calib)) + ',' + str(round(reflectance)) + ','
                 lineInput = lineInput + intensityL_temp_time_buffer[i] + ',' + str(round(intensityL_temp_buffer[n,i])) + ',' + str(round(intensityL_calib)) + ','  + str(round(reflectance)) + ','
             lineInput = lineInput + str(round(self.backgroundIntensity[n])) + '\n'
             outfile.write(lineInput)
-        # 
+    #     # 
         outfile.close()
         self.save_counter = self.save_counter + 1
         time.sleep(1)
         winsound.Beep(1000,300)
-        self.ui.lineEdit_2.setText(str(self.intensity_E_buffersize) + " E measurements and "+str(self.intensity_L_buffersize) + " L measurements were saved!")
-    def saveSpectra3(self):
-        intensityL = self.intensity_L_queue[4]
-        intensityE = self.intensity_E_queue[round(self.intensity_E_buffersize/2)]
-        intensityL_calib = np.multiply(intensityL, self.calibCoeff_L)
-        intensityE_calib = np.multiply(intensityE, self.calibCoeff_E)
-        reflectance = self.getReflectance(intensityE, intensityL)
-        control_info = "Integration time (ms) (L): " + str(self.int_time_L/1000) + ", Integration time (ms) (E): " + str(self.int_time_E/1000) + ", Scans to average (L): " + str(self.scans_to_avg_L) + ", Scans to average (E): " + str(self.scans_to_avg_E) + '\n'
-        header_info = "Wavelength, Intensity (L), intensity calibrated (L), Intensity (E), Intensity calibrated (L), Background, Reflectance " + control_info
-        filename = self.directoryPath + '\\'+self.ui.lineEdit_14.text() + '_'+self.spec.model+'_'+str(self.save_counter)+'_'+ datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+'.txt'
-        outfile = open(filename,'w')
-        outfile.write(header_info)
-        for idx in range(0, len(self.wavelength)):
-            outfile.write(str(round(self.wavelength[idx],4)) + ',' + str(round(intensityL[idx],2)) + ',' + str(round(intensityL_calib[idx],2)) + ',' + str(round(intensityE[idx],2)) + ',' + str(round(intensityE_calib[idx],2)) + ',' + str(round(self.backgroundIntensity[idx],2)) + ',' + str(round(reflectance[idx],2)) + '\n')
-        outfile.close()
-        winsound.Beep(500,100)
-    def saveSpectra(self):
-        if self.if_L:
-            intensityL = np.subtract(self.intensity_L, self.backgroundIntensity)
-            intensityL_calib = np.multiply(intensityL, self.calibCoeff_L)
-            print(len(self.intensity_L_queue))
-            if self.intensity_E is not None:
-                intensityE =  np.subtract(self.intensity_E, self.backgroundIntensity)
-                intensityE_calib = np.multiply(intensityE, self.calibCoeff_E)
-        else:
-            intensityE = np.subtract(self.intensity_E, self.backgroundIntensity)
-            intensityE_calib = np.multiply(intensityE, self.calibCoeff_E)
-            print(len(self.intensity_E_queue))
-            if self.intensity_L is not None:
-                intensityL =  np.subtract(self.intensity_L, self.backgroundIntensity)
-                intensityL_calib = np.multiply(intensityL, self.calibCoeff_L)
-        # reflectance = np.divide(intensityL_calib,intensityE_calib)
-        control_info = "Integration time (L): " + str(self.int_time_L) + ", Integration time (E): " + str(self.int_time_E) + ", Scans to average (L): " + str(self.scans_to_avg_L) + ", Scans to average (E): " + str(self.scans_to_avg_E) + '\n'
-        filename = self.directoryPath + '\\'+self.ui.lineEdit_14.text() + '_'+self.spec.model+'_'+str(self.save_counter)+'_'+ datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+'.txt'
-        outfile = open(filename,'w')
-        outfile.write("Wavelength, Intensity (L), intensity calibrated (L), Intensity (E), Intensity calibrated (L), Background, Reflectance " + control_info)
-        for idx in range(0,len(self.wavelength)):
-            outfile.write(str(round(self.wavelength[idx],4)) + ',' + str(round(intensityL[idx],2)) + ',' + str(round(intensityL_calib[idx],2)) + ',' + str(round(intensityE[idx],2)) + ',' + str(round(intensityE_calib[idx],2)) + ',' + str(round(self.backgroundIntensity[idx],2)) + ',' + str(round(self.reflectance[idx],2)) + '\n')
-        outfile.close()
-        winsound.Beep(500, 100)
-        self.save_counter = self.save_counter + 1
+    # def saveSpectra2(self):
+    #     # acquire n - 1 future measurements
+    #     intensityL_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
+    #     intensityL_temp_time_buffer = []
+    #     for i in range(0, self.intensity_buffersize):
+    #         curr_time = datetime.now().strftime("%H:%M:%S:%f")
+    #         intensityL_temp_time_buffer.append(curr_time)
+    #         IntensityL_temp, dark_temp = self.getSpectra(correct_dark_counts = self.correct_dark_counts, correct_nonlinearity=self.correct_nonlinearity)
+    #         intensityL_temp_buffer[:,i] = [a-b for a, b in zip(IntensityL_temp, self.backgroundIntensity)]
+    #         # print("Save measurement")
+    #         winsound.Beep(500,100)
+    #     reference_percentage = 100
+    #     control_info = "Integration time (L): " + str(self.int_time_L) + ", Integration time (E): " + str(self.int_time_E) + ", Scans to average (L): " + str(self.scans_to_avg_L) + ", Scans to average (E): " + str(self.scans_to_avg_E) + '\n'
+    #     filename = self.directoryPath + '\\'+self.ui.lineEdit_14.text() + '_'+self.spec.model+'_'+str(self.save_counter)+'_'+ datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+'.txt'
+    #     outfile = open(filename,'w')
+    #     headerInfo = "Wavelength (nm)" + ","
+    #     # + "Intensity 1 (L)," + "Intensity 1 calibrated (L)," + "Intensity 1 (E)," + "Intensity 1 calibrated (E)," + "Intensity 2 (L)," + "Intensity 2 calibrated (L)," + "Intensity 2 (E)," + "Intensity 2 calibrated (E),"+ "Intensity 3 (L)," + "Intensity 3 calibrated (L),"+ "Intensity 3 (E)," + "Intensity 3 calibrated (E),"+ "Intensity 4 (L)," + "Intensity 4 calibrated (L),"+ "Intensity 4 (E)," + "Intensity 4 calibrated (E),"+ "Intensity 5 (L)," + "Intensity 5 calibrated (L),"+ "Intensity 5 (E)," + "Intensity 5 calibrated (E),"+ "Reflectance," + "Background\n"
+    #     for j in range(0, self.intensity_buffersize):
+    #         headerInfo = headerInfo + "Time ("+str(i+1) +")," + "Intensity "+str(i+1)+" (L)," + "Intensity "+str(i+1)+" calibrated (L)," 
+    #     for i in range(0, self.intensity_buffersize):
+    #         headerInfo = headerInfo + "Time ("+str(i+1) +")," +"Intensity "+str(i+1)+" (E)," + "Intensity "+str(i+1)+" calibrated (E)," + "Reflectance " + str(i+1)+","
+    #     headerInfo = headerInfo + "Background, " + control_info + "\n"
+    #     outfile.write(headerInfo)
+    #     for n in range(0, len(self.wavelength)):
+    #         lineInput = str(self.wavelength[n]) + ','
+    #         for j in range(0, self.intensity_buffersize):
+    #             intensityE_calib = self.intensity_E_queue[j][n] * self.calibCoeff_E[n]
+    #             lineInput = lineInput + self.intensity_E_time_queue[j] + ','+ str(round(self.intensity_E_queue[j][n])) + ',' + str(round(intensityE_calib)) + ','
+    #         for i in range(0, self.intensity_buffersize):
+    #             # intensityL_calib = self.intensity_L_queue[i][n] * self.calibCoeff_L[n]
+    #             intensityL_calib = intensityL_temp_buffer[n,i] * self.calibCoeff_L[n]
+    #             if (self.intensity_buffersize == 0):
+    #                 reflectance = intensityL_calib/((self.intensity_E_queue[0][n] * self.calibCoeff_E[n])/(reference_percentage/100))
+    #             else:
+    #                 reflectance = intensityL_calib/((self.intensity_E_queue[round(self.intensity_buffersize/2)][n] * self.calibCoeff_E[n])/(reference_percentage/100))
+    #             # lineInput = lineInput + str(round(self.intensity_L_queue[i][n])) + ',' + str(round(intensityL_calib)) + ',' + str(round(self.intensity_E_queue[i][n])) + ',' + str(round(intensityE_calib)) + ',' + str(round(reflectance)) + ','
+    #             lineInput = lineInput + intensityL_temp_time_buffer[i] + ',' + str(round(intensityL_temp_buffer[n,i])) + ',' + str(round(intensityL_calib)) + ','  + str(round(reflectance)) + ','
+    #         lineInput = lineInput + str(round(self.backgroundIntensity[n])) + '\n'
+    #         outfile.write(lineInput)
+    #     # 
+    #     outfile.close()
+    #     self.save_counter = self.save_counter + 1
+    #     time.sleep(1)
+    #     winsound.Beep(1000,300)
+    #     self.ui.lineEdit_2.setText(str(self.intensity_buffersize) + " E measurements and "+str(self.intensity_buffersize) + " L measurements were saved!")
+    # def saveSpectra3(self):
+    #     intensityL = self.intensity_L_queue[4]
+    #     intensityE = self.intensity_E_queue[round(self.intensity_buffersize/2)]
+    #     intensityL_calib = np.multiply(intensityL, self.calibCoeff_L)
+    #     intensityE_calib = np.multiply(intensityE, self.calibCoeff_E)
+    #     reflectance = self.getReflectance(intensityE, intensityL)
+    #     control_info = "Integration time (ms) (L): " + str(self.int_time_L/1000) + ", Integration time (ms) (E): " + str(self.int_time_E/1000) + ", Scans to average (L): " + str(self.scans_to_avg_L) + ", Scans to average (E): " + str(self.scans_to_avg_E) + '\n'
+    #     header_info = "Wavelength, Intensity (L), intensity calibrated (L), Intensity (E), Intensity calibrated (L), Background, Reflectance " + control_info
+    #     filename = self.directoryPath + '\\'+self.ui.lineEdit_14.text() + '_'+self.spec.model+'_'+str(self.save_counter)+'_'+ datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+'.txt'
+    #     outfile = open(filename,'w')
+    #     outfile.write(header_info)
+    #     for idx in range(0, len(self.wavelength)):
+    #         outfile.write(str(round(self.wavelength[idx],4)) + ',' + str(round(intensityL[idx],2)) + ',' + str(round(intensityL_calib[idx],2)) + ',' + str(round(intensityE[idx],2)) + ',' + str(round(intensityE_calib[idx],2)) + ',' + str(round(self.backgroundIntensity[idx],2)) + ',' + str(round(reflectance[idx],2)) + '\n')
+    #     outfile.close()
+    #     winsound.Beep(500,100)
+    # def saveSpectra(self):
+        # if self.if_L:
+        #     intensityL = np.subtract(self.intensity_L, self.backgroundIntensity)
+        #     intensityL_calib = np.multiply(intensityL, self.calibCoeff_L)
+        #     print(len(self.intensity_L_queue))
+        #     if self.intensity_E is not None:
+        #         intensityE =  np.subtract(self.intensity_E, self.backgroundIntensity)
+        #         intensityE_calib = np.multiply(intensityE, self.calibCoeff_E)
+        # else:
+        #     intensityE = np.subtract(self.intensity_E, self.backgroundIntensity)
+        #     intensityE_calib = np.multiply(intensityE, self.calibCoeff_E)
+        #     print(len(self.intensity_E_queue))
+        #     if self.intensity_L is not None:
+        #         intensityL =  np.subtract(self.intensity_L, self.backgroundIntensity)
+        #         intensityL_calib = np.multiply(intensityL, self.calibCoeff_L)
+        # # reflectance = np.divide(intensityL_calib,intensityE_calib)
+        # control_info = "Integration time (L): " + str(self.int_time_L) + ", Integration time (E): " + str(self.int_time_E) + ", Scans to average (L): " + str(self.scans_to_avg_L) + ", Scans to average (E): " + str(self.scans_to_avg_E) + '\n'
+        # filename = self.directoryPath + '\\'+self.ui.lineEdit_14.text() + '_'+self.spec.model+'_'+str(self.save_counter)+'_'+ datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+'.txt'
+        # outfile = open(filename,'w')
+        # outfile.write("Wavelength, Intensity (L), intensity calibrated (L), Intensity (E), Intensity calibrated (L), Background, Reflectance " + control_info)
+        # for idx in range(0,len(self.wavelength)):
+        #     outfile.write(str(round(self.wavelength[idx],4)) + ',' + str(round(intensityL[idx],2)) + ',' + str(round(intensityL_calib[idx],2)) + ',' + str(round(intensityE[idx],2)) + ',' + str(round(intensityE_calib[idx],2)) + ',' + str(round(self.backgroundIntensity[idx],2)) + ',' + str(round(self.reflectance[idx],2)) + '\n')
+        # outfile.close()
+        # winsound.Beep(500, 100)
+        # self.save_counter = self.save_counter + 1
     def initializeSpectrometer(self):        
         if self.SpectrometerIndicator.value == False:
             self.ui.lineEdit_2.setText("Spectrometer is initializing")
@@ -542,7 +638,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.ui.lineEdit_2.setText("Initialization failed, please connect a device")
             self.spec = sb.Spectrometer(devices[0])
             self.device_list.append(self.spec.model)
-            self.serialcomm = serial.Serial('COM3',9600)
+            self.serialcomm = serial.Serial(port,9600)
             self.serialcomm.timeout = 1
             # self.serialcomm.write('on'.encode())
             self.ui.comboBox_2.addItems(self.device_list)
@@ -605,23 +701,26 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.spinBox_3.setMaximum(50)
             self.ui.spinBox_3.setValue(1)
             # self.setMeasNum()
-            self.intensity_E_buffersize = self.ui.spinBox_3.value()
-            self.intensity_E_queue = []
-            self.intensity_E_time_queue = []
-            for i in range(0, self.intensity_E_buffersize):
-                self.intensity_E_time_queue.append("")
-                self.intensity_E_queue.append([0] * len(self.wavelength))
+            # self.intensity_E_buffersize = self.ui.spinBox_3.value()
             
-            self.intensity_L_buffersize = self.ui.spinBox_3.value()
-            self.intensity_L_queue = []
-            for i in range(0, self.intensity_L_buffersize):
-                self.intensity_L_queue.append([0] * len(self.wavelength))
+            self.intensity_buffersize = self.ui.spinBox_3.value()
+            # self.intensity_L_queue = []
+            # for i in range(0, self.intensity_buffersize):
+            #     self.intensity_L_queue.append([0] * len(self.wavelength))
+            # self.intensity_E_queue = []
+            # self.intensity_E_time_queue = []
+            # for i in range(0, self.intensity_buffersize):
+            #     self.intensity_E_time_queue.append("")
+            #     self.intensity_E_queue.append([0] * len(self.wavelength))
+            
             ########## lineEdits for showing the current channel and number of measurements #########
             if (self.if_L):
                 self.ui.lineEdit_4.setText("Current channel: Radiance (L).")
+                self.ui.lineEdit_4.setEnabled(False)
             else:
-                self.ui.lineEdit_4.setText("Current channel: E-Radiance (E).")
-            self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_L_buffersize) + " (L), " + str(self.intensity_E_buffersize) + " (E).")
+                self.ui.lineEdit_4.setText("Current channel: Irradiance (E).")
+                self.ui.lineEdit_4.setEnabled(False)
+            self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
             self.backgroundIntensity = [0] * len(self.wavelength)
             self.reflectance = [0] * len(self.wavelength)
             self.Eout_avg = 0
@@ -725,7 +824,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.doubleSpinBox_12.setValue(775)
             self.setOutRightRange2()
             self.if_range_changed = False
-            
+            time.sleep(5)
             self.startWorker()
             # self.startControlFoS()
             return self.spec
@@ -739,34 +838,44 @@ class MainWindow(QtWidgets.QMainWindow):
             self.SpectrometerIndicator.value = False #Closes the spectrometer
             self.lineEdit_2.setText("Spectrometer has been disconnected")
             self.pushButton_11.setStyleSheet("QPushButton {background-color: rgb(227,119,100)}")
-    def setMeasNum(self):
-        if self.if_L:
-            prev_buffer_size = self.intensity_L_buffersize
-            curr_buffer_size = self.ui.spinBox_3.value()
-            if prev_buffer_size > curr_buffer_size:
-                for i in range(0, (prev_buffer_size - curr_buffer_size)):
-                    self.intensity_L_queue.pop(0)
-            else:
-                for i in range(0, (curr_buffer_size - prev_buffer_size)):
-                    self.intensity_L_queue.append([0] * len(self.wavelength))
-            self.intensity_L_buffersize = curr_buffer_size
-        else:
-            prev_buffer_size = self.intensity_E_buffersize
-            curr_buffer_size = self.ui.spinBox_3.value()
-            if prev_buffer_size > curr_buffer_size:
-                for i in range(0, (prev_buffer_size - curr_buffer_size)):
-                    self.intensity_E_queue.pop(0)
-                    self.intensity_E_time_queue.pop(0)
-            else:
-                for i in range(0, (curr_buffer_size - prev_buffer_size)):
-                    self.intensity_E_queue.append([0] * len(self.wavelength))
-                    self.intensity_E_time_queue.append("") 
-            self.intensity_E_buffersize = curr_buffer_size
-        self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_L_buffersize) + " (L), " + str(self.intensity_E_buffersize) + " (E).")
-    # def setMeasNumL(self):
-    #     self.intensity_L_buffersize = self.spinBox_3.value()
-    # def setMeasNumE(self):
-    #     self.intensity_E_buffersize = self.spinBox_6.value()     
+    def setMeasNum2(self):
+        # prev_buffer_size = self.intensity_buffersize
+        # curr_buffer_size = self.ui.spinBox_3.value()
+        self.intensity_buffersize = self.ui.spinBox_3.value()
+        self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
+        self.ui.lineEdit_5.setEnabled(False)
+        # if prev_buffer_size > curr_buffer_size:
+        #     for i in range(0, (prev_buffer_size - curr_buffer_size)):
+        #         self.intensity_L_queue.pop(0)
+        # else:
+        #     for i in range(0, (curr_buffer_size - prev_buffer_size)):
+        #         self.intensity_L_queue.append([0] * len(self.wavelength))
+        #     self.intensity_buffersize = curr_buffer_size
+    # def setMeasNum(self):
+    #     if self.if_L:
+    #         prev_buffer_size = self.intensity_buffersize
+    #         curr_buffer_size = self.ui.spinBox_3.value()
+    #         if prev_buffer_size > curr_buffer_size:
+    #             for i in range(0, (prev_buffer_size - curr_buffer_size)):
+    #                 self.intensity_L_queue.pop(0)
+    #         else:
+    #             for i in range(0, (curr_buffer_size - prev_buffer_size)):
+    #                 self.intensity_L_queue.append([0] * len(self.wavelength))
+    #         self.intensity_buffersize = curr_buffer_size
+    #     else:
+    #         prev_buffer_size = self.intensity_buffersize
+    #         curr_buffer_size = self.ui.spinBox_3.value()
+    #         if prev_buffer_size > curr_buffer_size:
+    #             for i in range(0, (prev_buffer_size - curr_buffer_size)):
+    #                 self.intensity_E_queue.pop(0)
+    #                 self.intensity_E_time_queue.pop(0)
+    #         else:
+    #             for i in range(0, (curr_buffer_size - prev_buffer_size)):
+    #                 self.intensity_E_queue.append([0] * len(self.wavelength))
+    #                 self.intensity_E_time_queue.append("") 
+    #         self.intensity_buffersize = curr_buffer_size
+    #     self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
+     
     def setSpecIntTime(self):
         self.isIntTimeChanged = True
         
@@ -822,43 +931,65 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.checkBox_4.setEnabled(False)
             self.ui.checkBox_3.setEnabled(False)
             self.ui.pushButton_12.setEnabled(False)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_9.setEnabled(True)
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_14.setEnabled(False)
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(True)
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.if_L = False
+            self.serialcomm.write("off".encode())
         else:
             self.ui.checkBox_4.setEnabled(True)
             self.ui.checkBox_3.setEnabled(True)
             self.ui.pushButton_12.setEnabled(False)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_9.setEnabled(False)
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_14.setEnabled(False)
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(False)
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
     def LOnlyFibreMode(self):
         if self.ui.checkBox_3.isChecked():
             self.ui.checkBox_2.setEnabled(False)
             self.ui.checkBox.setEnabled(False)
             self.ui.checkBox_4.setEnabled(False)
             self.ui.pushButton_12.setEnabled(True)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_9.setEnabled(False)
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_14.setEnabled(True)
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(False)
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.if_L = True
+            self.serialcomm.write("on".encode())
         else:
             self.ui.checkBox.setEnabled(True)
             self.ui.checkBox_4.setEnabled(True)
             self.ui.pushButton_12.setEnabled(False)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_9.setEnabled(False)
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_14.setEnabled(False)
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(False)
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
     def BothFibreMode(self):
         if self.ui.checkBox_4.isChecked():
             self.ui.checkBox_2.setEnabled(True)
             self.ui.checkBox.setEnabled(False)
             self.ui.checkBox_3.setEnabled(False)
             self.ui.pushButton_12.setEnabled(True)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_9.setEnabled(True)
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_14.setEnabled(True)
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(True)
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             if self.ui.checkBox_2.isChecked():
                 # i = 'off'
                 self.if_L = False
@@ -869,19 +1000,29 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.checkBox.setEnabled(True)
             self.ui.checkBox_3.setEnabled(True)
             self.ui.pushButton_12.setEnabled(False)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_9.setEnabled(False)
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_14.setEnabled(False)
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(False)
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
     def trigger_switched(self):
         if self.ui.checkBox_2.isChecked():
             self.if_L = False
             i = 'off'
             self.serialcomm.write(i.encode())
-            self.ui.lineEdit_2.setText("E Fibre selected.")
+            self.ui.lineEdit_2.setText("Irradiance selected.")
+            self.ui.lineEdit_4.setText("Current channel: Irradiance (E).")
+            self.ui.lineEdit_4.setEnabled(False)
             self.ui.pushButton_12.setEnabled(False)
             self.ui.pushButton_9.setEnabled(True)
             self.ui.pushButton_14.setEnabled(False)
             self.ui.pushButton_13.setEnabled(True)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             # self.plot_datas[0] = None
             # self.plot_datas[3] = None
             # self.plot_datas[6] = None
@@ -897,6 +1038,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.reference_plots[7].set_alpha(0.4)
                 self.canvases[7].draw()
             self.spec.integration_time_micros(self.int_time_E)
+            self.scans_to_avg_E = self.ui.spinBox_5.value()
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(28,255,0)}")
+            self.current_scans_to_avg = self.scans_to_avg_E
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(28,255,0)}")
             # self.plot_datas[7] = None
             # self.reference_plots[7] = None
             # self.canvases[7].axes.clear()
@@ -909,10 +1054,16 @@ class MainWindow(QtWidgets.QMainWindow):
             i = 'on'
             self.serialcomm.write(i.encode())
             self.ui.lineEdit_2.setText("L Fibre selected.")
+            self.ui.lineEdit_4.setText("Current channel: Radiance (L).")
+            self.ui.lineEdit_4.setEnabled(False)
             self.ui.pushButton_12.setEnabled(True)
             self.ui.pushButton_9.setEnabled(False)
             self.ui.pushButton_14.setEnabled(True)
             self.ui.pushButton_13.setEnabled(False)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+            self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+            self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             # self.plot_datas[1] = None
             # self.plot_datas[4] = None
             # self.plot_datas[7] = None
@@ -928,6 +1079,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.reference_plots[6].set_alpha(0.4)
                 self.canvases[6].draw()
             self.spec.integration_time_micros(self.int_time_L)
+            self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(28,255,0)}")
+            self.scans_to_avg_L = self.ui.spinBox_2.value()
+            self.current_scans_to_avg = self.scans_to_avg_L
+            self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(28,255,0)}")
         # print(self.if_L)
             # self.ui.spinBox.setEnabled(True)
             # self.ui.spinBox_4.setEnabled(False)
