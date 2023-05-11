@@ -484,8 +484,159 @@ class MainWindow(QtWidgets.QMainWindow):
         outfile.close()
         winsound.Beep(1000,300)
         self.save_counter = self.save_counter + 1
+        # updates plots
+        min_y = np.min(intensityL[1::])
+        max_y = np.max(intensityL[1::])
+        QtWidgets.QApplication.processEvents()
+        self.canvases[1].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[1].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[1].axes.set_ylabel('Intensity ')
+        self.canvases[1].axes.set_title("Raw L", color='w')
+        [t.set_color('w') for t in self.canvases[1].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[1].axes.yaxis.get_ticklabels()]
+        self.plot_datas[1] = intensityL
+        if self.reference_plots[1] is None:
+            plot_refs = self.canvases[1].axes.plot(self.wavelength[1::],intensityL[1::], color=(0,1,0.29), alpha = 1)
+            self.reference_plots[1] = plot_refs[0]	
+        else:
+            self.reference_plots[1].set_ydata(intensityL[1::])
+            self.reference_plots[1].set_alpha(1)
+        self.canvases[1].draw()
+
+        min_y = np.min(intensityL_calib[1::])
+        max_y = np.max(intensityL_calib[1::])
+        QtWidgets.QApplication.processEvents()
+        self.canvases[4].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[4].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[4].axes.set_ylabel('Intensity ')
+        self.canvases[4].axes.set_title("Calib L", color='w')
+        [t.set_color('w') for t in self.canvases[4].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[4].axes.yaxis.get_ticklabels()]
+        print("plot calib after saving")
+        self.plot_datas[4] = intensityL_calib
+        if self.reference_plots[4] is None:
+            plot_refs = self.canvases[4].axes.plot(self.wavelength,intensityL_calib, color=(0,1,0.29), alpha = 1)
+            self.reference_plots[4] = plot_refs[0]	
+        else:
+            self.reference_plots[4].set_ydata(intensityL_calib)
+            self.reference_plots[4].set_alpha(1)
+        self.canvases[4].draw()
+        
+        wAB = [index for index,value in enumerate(self.wavelength) if (value > self.plotRangeLeft and value < self.plotRangeRight)]
+        # print(self.wavelength[min(wAB)])
+        # print(self.wavelength[max(wAB)])
+        min_y = min(intensityE_calib[min(wAB):max(wAB)])
+        max_y = max(intensityE_calib[min(wAB):max(wAB)])
+        # self.ui.lineEdit_2.setText("Measurement On " + str(max_y))
+        self.canvases[7].axes.clear()
+        self.canvases[7].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[7].axes.set_xlim(xmin = self.wavelength[min(wAB)], xmax=self.wavelength[max(wAB)])
+        self.canvases[7].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[7].axes.set_ylabel('Intensity ')
+        self.canvases[7].axes.set_title("Calib L (A-B)",color='w')
+        [t.set_color('w') for t in self.canvases[7].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[7].axes.yaxis.get_ticklabels()]
+        self.plot_datas[7] = intensityL_calib
+        # self.canvases[7].axes.clear()
+        plot_refs = self.canvases[7].axes.plot(self.wavelength[min(wAB):max(wAB)],intensityL_calib[min(wAB):max(wAB)], color=(0,1,0.29), alpha = 1)
+        self.canvases[7].draw()
 
 
+        min_y = np.min(intensityE[1::])
+        max_y = np.max(intensityE[1::])
+        self.canvases[0].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[0].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[0].axes.set_ylabel('Intensity ')
+        self.canvases[0].axes.set_title("Raw E", color='w')
+        [t.set_color('w') for t in self.canvases[0].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[0].axes.yaxis.get_ticklabels()]
+        self.plot_datas[0] = intensityE
+        if self.reference_plots[0] is None:
+            plot_refs = self.canvases[0].axes.plot(self.wavelength[1::],intensityL[1::], color=(0,1,0.29), alpha = 1)
+            self.reference_plots[0] = plot_refs[0]	
+        else:
+            self.reference_plots[0].set_ydata(intensityE[1::])
+            self.reference_plots[0].set_alpha(1)
+        self.canvases[0].draw()
+
+        min_y = np.min(intensityE_calib[1::])
+        max_y = np.max(intensityE_calib[1::])
+        self.canvases[3].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[3].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[3].axes.set_ylabel('Intensity ')
+        self.canvases[3].axes.set_title("Calib E", color='w')
+        [t.set_color('w') for t in self.canvases[3].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[3].axes.yaxis.get_ticklabels()]
+        self.plot_datas[3] = intensityE_calib
+        if self.reference_plots[3] is None:
+            plot_refs = self.canvases[3].axes.plot(self.wavelength,intensityE_calib, color=(0,1,0.29), alpha = 1)
+            self.reference_plots[3] = plot_refs[0]	
+        else:
+            self.reference_plots[3].set_ydata(intensityE_calib)
+            self.reference_plots[3].set_alpha(1)
+        self.canvases[3].draw()
+
+        wAB = [index for index,value in enumerate(self.wavelength) if (value > self.plotRangeLeft and value < self.plotRangeRight)]
+        # print(self.wavelength[min(wAB)])
+        # print(self.wavelength[max(wAB)])
+        min_y = min(intensityE_calib[min(wAB):max(wAB)])
+        max_y = max(intensityE_calib[min(wAB):max(wAB)])
+        # self.ui.lineEdit_2.setText("Measurement On " + str(max_y))
+        self.canvases[6].axes.clear()
+        self.canvases[6].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[6].axes.set_xlim(xmin = self.wavelength[min(wAB)], xmax=self.wavelength[max(wAB)])
+        self.canvases[6].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[6].axes.set_ylabel('Intensity ')
+        self.canvases[6].axes.set_title("Calib E (A-B)",color='w')
+        [t.set_color('w') for t in self.canvases[6].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[6].axes.yaxis.get_ticklabels()]
+        self.plot_datas[6] = intensityE_calib
+        
+        # self.canvases[6].axes.clear()
+        plot_refs = self.canvases[6].axes.plot(self.wavelength[min(wAB):max(wAB)],intensityE_calib[min(wAB):max(wAB)], color=(0,1,0.29), alpha = 1)
+        # if self.reference_plots[6] is None:
+        #     # plot_refs = self.canvases[7].axes.plot(self.wavelength[min(wAB):max(wAB)],self.ydata_calib[min(wAB):max(wAB)], color=(0,1,0.29))
+        #     plot_refs = self.canvases[6].axes.plot(self.wavelength[min(wAB):max(wAB)],intensityE_calib[min(wAB):max(wAB)], color=(0,1,0.29), alpha = 1)
+        #     self.reference_plots[6] = plot_refs[0]	
+        # else:
+        #     self.reference_plots[6].set_ydata(intensityE_calib[min(wAB):max(wAB)])
+        #     self.reference_plots[6].set_alpha(1)
+        self.canvases[6].draw()
+
+        max_y = 10
+        min_y = -10
+        # max_y = np.divide(np.max(self.ydata_calib),np.max(np.multiply(np.subtract(self.intensity_E[1::], self.backgroundIntensity[1::]), self.calibCoeff_E[1::])))
+        # print(min_y)
+        # print(max_y)
+        self.canvases[5].axes.set_ylim(ymin = min_y + 3 * min_y, ymax= max_y + 3 * max_y)
+        self.canvases[5].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[5].axes.set_ylabel('Intensity ')
+        self.canvases[5].axes.set_title("Reflectance",color='w')
+        [t.set_color('w') for t in self.canvases[5].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[5].axes.yaxis.get_ticklabels()]
+        self.plot_datas[5] = reflectance[1::]
+        if self.reference_plots[5] is None:
+            plot_refs = self.canvases[5].axes.plot(self.wavelength[1::],reflectance[1::], color=(0,1,0.29))
+            self.reference_plots[5] = plot_refs[0]	
+        else:
+            self.reference_plots[5].set_ydata(reflectance[1::])
+        self.canvases[5].draw()
+        # min_y = min(self.reflectance[min(wAB):max(wAB)])
+        # max_y = max(self.reflectance[min(wAB):max(wAB)])
+        # self.ui.lineEdit_2.setText("Measurement On " + str(max_y) + " " + str(min_y))
+        self.canvases[8].axes.set_ylim(ymin = min_y + 3 * min_y, ymax= max_y + 3 * max_y)
+        self.canvases[8].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[8].axes.set_ylabel('Intensity ')
+        self.canvases[8].axes.set_title("Reflectance (A-B)",color='w')
+        [t.set_color('w') for t in self.canvases[8].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[8].axes.yaxis.get_ticklabels()]
+        self.plot_datas[8] = reflectance[min(wAB):max(wAB)]
+        if self.reference_plots[8] is None:
+            plot_refs = self.canvases[8].axes.plot(self.wavelength[min(wAB):max(wAB)],reflectance[min(wAB):max(wAB)], color=(0,1,0.29))
+            self.reference_plots[8] = plot_refs[0]	
+        else:
+            self.reference_plots[8].set_ydata(reflectance[min(wAB):max(wAB)])
+        self.canvases[8].draw()
     def saveSpectra4(self):
         intensityL_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
         intensityE_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
@@ -543,6 +694,168 @@ class MainWindow(QtWidgets.QMainWindow):
         self.save_counter = self.save_counter + 1
         time.sleep(1)
         winsound.Beep(1000,300)
+        min_y = np.min(intensityL_temp_buffer[1::,self.intensity_buffersize-1])
+        max_y = np.max(intensityL_temp_buffer[1::,self.intensity_buffersize-1])
+        QtWidgets.QApplication.processEvents()
+        self.canvases[1].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[1].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[1].axes.set_ylabel('Intensity ')
+        self.canvases[1].axes.set_title("Raw L", color='w')
+        [t.set_color('w') for t in self.canvases[1].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[1].axes.yaxis.get_ticklabels()]
+        self.plot_datas[1] = intensityL_temp_buffer[:,self.intensity_buffersize-1]
+        if self.reference_plots[1] is None:
+            plot_refs = self.canvases[1].axes.plot(self.wavelength[1::],intensityL_temp_buffer[1::,self.intensity_buffersize-1], color=(0,1,0.29), alpha = 1)
+            self.reference_plots[1] = plot_refs[0]	
+        else:
+            self.reference_plots[1].set_ydata(intensityL_temp_buffer[1::,self.intensity_buffersize-1])
+            self.reference_plots[1].set_alpha(1)
+        self.canvases[1].draw()
+
+        intensityL_calib_temp = np.multiply(intensityL_temp_buffer[:,self.intensity_buffersize-1], self.calibCoeff_L)
+        min_y = np.min(intensityL_calib_temp[1::])
+        max_y = np.max(intensityL_calib_temp[1::])
+        QtWidgets.QApplication.processEvents()
+        self.canvases[4].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[4].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[4].axes.set_ylabel('Intensity ')
+        self.canvases[4].axes.set_title("Calib L", color='w')
+        [t.set_color('w') for t in self.canvases[4].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[4].axes.yaxis.get_ticklabels()]
+        self.plot_datas[4] = intensityL_calib_temp
+        if self.reference_plots[4] is None:
+            plot_refs = self.canvases[4].axes.plot(self.wavelength,intensityL_calib_temp, color=(0,1,0.29), alpha = 1)
+            self.reference_plots[4] = plot_refs[0]	
+        else:
+            self.reference_plots[4].set_ydata(intensityL_calib_temp)
+            self.reference_plots[4].set_alpha(1)
+        self.canvases[4].draw()
+        
+        wAB = [index for index,value in enumerate(self.wavelength) if (value > self.plotRangeLeft and value < self.plotRangeRight)]
+        # print(self.wavelength[min(wAB)])
+        # print(self.wavelength[max(wAB)])
+        min_y = min(intensityL_calib_temp[min(wAB):max(wAB)])
+        max_y = max(intensityL_calib_temp[min(wAB):max(wAB)])
+        # self.ui.lineEdit_2.setText("Measurement On " + str(max_y))
+        self.canvases[7].axes.clear()
+        self.canvases[7].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[7].axes.set_xlim(xmin = self.wavelength[min(wAB)], xmax=self.wavelength[max(wAB)])
+        self.canvases[7].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[7].axes.set_ylabel('Intensity ')
+        self.canvases[7].axes.set_title("Calib L (A-B)",color='w')
+        [t.set_color('w') for t in self.canvases[7].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[7].axes.yaxis.get_ticklabels()]
+        self.plot_datas[7] = intensityL_calib_temp
+        # self.reference_plots[7] = None
+        
+        self.canvases[7].axes.plot(self.wavelength[min(wAB):max(wAB)], intensityL_calib_temp[min(wAB):max(wAB)], color=(0,1,0.29), alpha = 1)
+        # if self.reference_plots[7] is None:
+        #     # plot_refs = self.canvases[7].axes.plot(self.wavelength[min(wAB):max(wAB)],self.ydata_calib[min(wAB):max(wAB)], color=(0,1,0.29))
+        #     plot_refs = self.canvases[7].axes.plot(self.wavelength, intensityL_calib_temp, color=(0,1,0.29), alpha = 1)
+        #     self.reference_plots[7] = plot_refs[0]	
+        # else:
+        #     self.reference_plots[7].set_ydata(intensityL_calib_temp)
+        #     self.reference_plots[7].set_alpha(1)
+        self.canvases[7].draw()
+
+
+        min_y = np.min(intensityE_temp_buffer[1::,self.intensity_buffersize-1])
+        max_y = np.max(intensityE_temp_buffer[1::, self.intensity_buffersize-1])
+        self.canvases[0].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[0].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[0].axes.set_ylabel('Intensity ')
+        self.canvases[0].axes.set_title("Raw E", color='w')
+        [t.set_color('w') for t in self.canvases[0].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[0].axes.yaxis.get_ticklabels()]
+        self.plot_datas[0] = intensityE_temp_buffer[:, self.intensity_buffersize-1]
+        if self.reference_plots[0] is None:
+            plot_refs = self.canvases[0].axes.plot(self.wavelength[1::],intensityE_temp_buffer[1::, self.intensity_buffersize-1], color=(0,1,0.29), alpha = 1)
+            self.reference_plots[0] = plot_refs[0]	
+        else:
+            self.reference_plots[0].set_ydata(intensityE_temp_buffer[1::, self.intensity_buffersize-1])
+            self.reference_plots[0].set_alpha(1)
+        self.canvases[0].draw()
+        
+        intensityE_calib_temp = np.multiply(intensityE_temp_buffer[:,self.intensity_buffersize-1],self.calibCoeff_E)
+        min_y = np.min(intensityE_calib_temp[1::])
+        max_y = np.max(intensityE_calib_temp[1::])
+        self.canvases[3].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[3].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[3].axes.set_ylabel('Intensity ')
+        self.canvases[3].axes.set_title("Calib E", color='w')
+        [t.set_color('w') for t in self.canvases[3].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[3].axes.yaxis.get_ticklabels()]
+        self.plot_datas[3] = intensityE_calib_temp
+        if self.reference_plots[3] is None:
+            plot_refs = self.canvases[3].axes.plot(self.wavelength,intensityE_calib_temp, color=(0,1,0.29), alpha = 1)
+            self.reference_plots[3] = plot_refs[0]	
+        else:
+            self.reference_plots[3].set_ydata(intensityE_calib_temp)
+            self.reference_plots[3].set_alpha(1)
+        self.canvases[3].draw()
+
+        wAB = [index for index,value in enumerate(self.wavelength) if (value > self.plotRangeLeft and value < self.plotRangeRight)]
+        # print(self.wavelength[min(wAB)])
+        # print(self.wavelength[max(wAB)])
+        min_y = min(intensityE_calib_temp[min(wAB):max(wAB)])
+        max_y = max(intensityE_calib_temp[min(wAB):max(wAB)])
+        # self.ui.lineEdit_2.setText("Measurement On " + str(max_y))
+        self.canvases[6].axes.clear()
+        self.canvases[6].axes.set_ylim(ymin = min_y, ymax= max_y)
+        self.canvases[6].axes.set_xlim(xmin = self.wavelength[min(wAB)], xmax=self.wavelength[max(wAB)])
+        self.canvases[6].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[6].axes.set_ylabel('Intensity ')
+        self.canvases[6].axes.set_title("Calib E (A-B)",color='w')
+        [t.set_color('w') for t in self.canvases[6].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[6].axes.yaxis.get_ticklabels()]
+        self.plot_datas[6] = intensityE_calib_temp
+        # self.reference_plots[6] = None
+        
+        self.canvases[6].axes.plot(self.wavelength[min(wAB):max(wAB)], intensityE_calib_temp[min(wAB):max(wAB)], color=(0,1,0.29), alpha = 1)
+        # if self.reference_plots[6] is None:
+        #     # plot_refs = self.canvases[7].axes.plot(self.wavelength[min(wAB):max(wAB)],self.ydata_calib[min(wAB):max(wAB)], color=(0,1,0.29))
+        #     plot_refs = self.canvases[6].axes.plot(self.wavelength[min(wAB):max(wAB)], intensityE_calib_temp[min(wAB):max(wAB)], color=(0,1,0.29), alpha = 1)
+        #     self.reference_plots[6] = plot_refs[0]	
+        # else:
+        #     self.reference_plots[6].set_ydata(intensityE_calib_temp)
+        #     self.reference_plots[6].set_alpha(1)
+        self.canvases[6].draw()
+
+        max_y = 10
+        min_y = -10
+        # max_y = np.divide(np.max(self.ydata_calib),np.max(np.multiply(np.subtract(self.intensity_E[1::], self.backgroundIntensity[1::]), self.calibCoeff_E[1::])))
+        # print(min_y)
+        # print(max_y)
+        reflectance_temp = self.getReflectance(intensityE_temp_buffer[:,self.intensity_buffersize-1], intensityL_temp_buffer[:, self.intensity_buffersize-1])
+        self.canvases[5].axes.set_ylim(ymin = min_y + 3 * min_y, ymax= max_y + 3 * max_y)
+        self.canvases[5].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[5].axes.set_ylabel('Intensity ')
+        self.canvases[5].axes.set_title("Reflectance",color='w')
+        [t.set_color('w') for t in self.canvases[5].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[5].axes.yaxis.get_ticklabels()]
+        self.plot_datas[5] = reflectance_temp[1::]
+        if self.reference_plots[5] is None:
+            plot_refs = self.canvases[5].axes.plot(self.wavelength[1::],reflectance_temp[1::], color=(0,1,0.29))
+            self.reference_plots[5] = plot_refs[0]	
+        else:
+            self.reference_plots[5].set_ydata(reflectance_temp[1::])
+        self.canvases[5].draw()
+        # min_y = min(self.reflectance[min(wAB):max(wAB)])
+        # max_y = max(self.reflectance[min(wAB):max(wAB)])
+        # self.ui.lineEdit_2.setText("Measurement On " + str(max_y) + " " + str(min_y))
+        self.canvases[8].axes.set_ylim(ymin = min_y + 3 * min_y, ymax= max_y + 3 * max_y)
+        self.canvases[8].axes.set_xlabel('Wavelength (nm)')
+        self.canvases[8].axes.set_ylabel('Intensity ')
+        self.canvases[8].axes.set_title("Reflectance (A-B)",color='w')
+        [t.set_color('w') for t in self.canvases[8].axes.xaxis.get_ticklabels()]
+        [t.set_color('w') for t in self.canvases[8].axes.yaxis.get_ticklabels()]
+        self.plot_datas[8] = reflectance_temp[min(wAB):max(wAB)]
+        if self.reference_plots[8] is None:
+            plot_refs = self.canvases[8].axes.plot(self.wavelength[min(wAB):max(wAB)],reflectance_temp[min(wAB):max(wAB)], color=(0,1,0.29))
+            self.reference_plots[8] = plot_refs[0]	
+        else:
+            self.reference_plots[8].set_ydata(reflectance_temp[min(wAB):max(wAB)])
+        self.canvases[8].draw()
     # def saveSpectra2(self):
     #     # acquire n - 1 future measurements
     #     intensityL_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
