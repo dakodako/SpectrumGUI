@@ -67,13 +67,20 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
-        self.ui = uic.loadUi('main8.ui',self)
+        self.ui = uic.loadUi('main10.ui',self)
         # self.title = 'HyperSens Spectrometer Software'
         self.ui.setWindowTitle('HyperSens Spectrometer Software')
         self.device_list = []
         self.ui.comboBox_2.addItems(self.device_list)
         self.ui.comboBox_2.setCurrentIndex(0)
-        
+        # Mode: double fibre, single fibre: L and R
+        self.serialcomm = serial.Serial(port,9600)
+        self.serialcomm.timeout = 1
+        self.ui.comboBox.addItems(['Both','E (Irradiance)','L (Radiance)'])
+        # self.ui.comboBox.addItems('L (Radiance)')
+        # self.ui.comboBox.addItems('R (Irradiance)')
+        self.ui.comboBox.setCurrentIndex(0)
+
         self.directoryPath = os.getcwd()
         self.ui.lineEdit.setText(self.directoryPath)
         self.ui.pushButton_21.clicked.connect(self.newDirectory)
@@ -92,17 +99,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_17.setEnabled(False)
         self.ui.pushButton_18.setEnabled(False)
         self.ui.pushButton_19.setEnabled(False)
-        self.ui.pushButton_20.setEnabled(False)
+        # self.ui.pushButton_20.setEnabled(False)
         # self.ui.pushButton_22.setEnabled(False)
         self.ui.pushButton_23.setEnabled(False)
-        self.ui.checkBox.setCheckable(True)
-        self.ui.checkBox.clicked.connect(self.EOnlyFibreMode)
-        self.ui.checkBox_3.setCheckable(True)
-        self.ui.checkBox_3.clicked.connect(self.LOnlyFibreMode)
-        self.ui.checkBox_4.setCheckable(True)
-        self.ui.checkBox_4.setChecked(True)
-        # self.BothFibreMode()
-        self.ui.checkBox_4.clicked.connect(self.BothFibreMode)
+
+        self.ui.comboBox.currentIndexChanged.connect(self.setFibreMode)
+        # self.ui.checkBox.setCheckable(True)
+        # self.ui.checkBox.clicked.connect(self.EOnlyFibreMode)
+        # self.ui.checkBox_3.setCheckable(True)
+        # self.ui.checkBox_3.clicked.connect(self.LOnlyFibreMode)
+        # self.ui.checkBox_4.setCheckable(True)
+        # self.ui.checkBox_4.setChecked(True)
+        # # self.BothFibreMode()
+        # self.ui.checkBox_4.clicked.connect(self.BothFibreMode)
         self.ui.pushButton_11.clicked.connect(self.initializeSpectrometer)
         # self.if_L = True
         self.ui.checkBox_2.setCheckable(True)
@@ -141,7 +150,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.ui.pushButton_8.clicked.connect(self.startWorker)
         self.ui.pushButton_18.clicked.connect(self.startWorker)
         # self.ui.pushButton_16.clicked.connect(self.stopWorker)
-        self.ui.pushButton_19.clicked.connect(self.stopWorker)
+        # self.ui.pushButton_19.clicked.connect(self.stopWorker)
+        self.ui.pushButton_19.clicked.connect(self.saveSpectra4)
         ######### get calibration file #########
         self.ui.pushButton_2.clicked.connect(self.open_calib_file_L) # get calibration file for L
         self.ui.pushButton_3.clicked.connect(self.open_calib_file_E) # get calibration file for E
@@ -155,7 +165,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.ui.pushButton_10.setCheckable(True)
         # self.ui.pushButton_10.clicked.connect(self.saveSpectra)
         self.ui.pushButton_17.clicked.connect(self.saveSpectraOne)
-        self.ui.pushButton_20.clicked.connect(self.saveSpectra4)
+        # self.ui.pushButton_20.clicked.connect(self.saveSpectra4)
         ######### Plots ########
         titles = ['Raw L', 'Raw E', 'Dark', 'Calibrated L (full)', 'Calibrated E (full)', 'Reflectance (full)', 'Calibrated L (A-B)','Calibrated E (A-B)', 'Reflectance (A-B)']
         self.canvases = []
@@ -374,11 +384,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_18.setEnabled(False)
         self.ui.pushButton.setEnabled(False)
         self.ui.pushButton_5.setEnabled(False)
-        self.ui.pushButton_17.setEnabled(False)
-        self.ui.pushButton_20.setEnabled(False)
-        self.ui.checkBox.setEnabled(False)
-        self.ui.checkBox_3.setEnabled(False)
-        self.ui.checkBox_4.setEnabled(False)
+        # self.ui.pushButton_17.setEnabled(False)
+        # self.ui.pushButton_20.setEnabled(False)
+        # need to disable the fibre mode selection
+        self.ui.comboBox.setEnabled(False)
+        # self.ui.checkBox.setEnabled(False)
+        # self.ui.checkBox_3.setEnabled(False)
+        # self.ui.checkBox_4.setEnabled(False)
         for i in range(0,9):
             # print("Close canvas")
             self.canvases[i].axes.clear()
@@ -402,11 +414,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_18.setEnabled(True)
         self.ui.pushButton.setEnabled(True)
         self.ui.pushButton_5.setEnabled(True)
-        self.ui.pushButton_20.setEnabled(True)
-        self.ui.pushButton_17.setEnabled(True)
-        self.ui.checkBox.setEnabled(True)
-        self.ui.checkBox_3.setEnabled(True)
-        self.ui.checkBox_4.setEnabled(True)
+        # self.ui.pushButton_20.setEnabled(True)
+        # self.ui.pushButton_17.setEnabled(True)
+        self.ui.comboBox.setEnabled(True)
+        # self.ui.checkBox.setEnabled(True)
+        # self.ui.checkBox_3.setEnabled(True)
+        # self.ui.checkBox_4.setEnabled(True)
         pg.QtGui.QGuiApplication.processEvents() 
         if self.if_L is not True:
             self.reference_plots[0].set_alpha(0.4)
@@ -431,6 +444,23 @@ class MainWindow(QtWidgets.QMainWindow):
         time.sleep(1) #This pauses the program for 3 seconds
         self.threadpool.thread().quit()
         sys.exit()
+    def read_calib_coeff_file(self, filename):
+        calibCoeffFile = open(filename, 'r')
+        lines = calibCoeffFile.read().splitlines()
+        lines = lines[1::] # skip the first line
+        Coeff_a = []
+        Coeff_b = []
+        for line in lines:
+            sline = line.split(',')
+            Coeff_a.append(float(sline[1]))
+            Coeff_b.append(float(sline[2]))
+        calibCoeffFile.close()
+        return Coeff_a, Coeff_b
+    def calc_calib_coeff(self, x, a, b, inte_time):
+        integrationTimeArray = np.ones(np.shape(x)) * inte_time
+        coeff = np.multiply(a, np.power(integrationTimeArray, b))
+        return coeff
+
     def read_calib_file(self, filename):
         self.ui.lineEdit_2.setText("Open " + filename)
         calibFile = open(filename,'r')
@@ -442,6 +472,20 @@ class MainWindow(QtWidgets.QMainWindow):
             calibCoeff.append(float(sline[1]))
         calibFile.close()
         return calibCoeff
+    def open_calib_coeff_file_L(self):
+        self.calib_coeff_file_name_L = QtWidgets.QFileDialog.getOpenFileName(None, "Open", "", "")
+        if (self.calib_coeff_file_name_L[0] != ''):
+            a, b = self.read_calib_coeff_file(self.calib_coeff_file_name_L[0])
+            self.calibCoeff_L = self.calc_calib_coeff(self.wavelength, a, b, self.int_time_L)
+            self.a_L = a
+            self.b_L = b
+    def open_calib_coeff_file_E(self):
+        self.calib_coeff_file_name_E = QtWidgets.QFileDialog.getOpenFileName(None, "Open", "", "")
+        if (self.calib_coeff_file_name_E[0] != ''):
+            a, b = self.read_calib_coeff_file(self.calib_coeff_file_name_E[0])
+            self.calibCoeff_E = self.calc_calib_coeff(self.wavelength, a, b, self.int_time_E)
+            self.a_E = a
+            self.b_E = b 
     def open_calib_file_L(self):
         self.calibCoeff_L = []
         self.calib_file_name_L = QtWidgets.QFileDialog.getOpenFileName(None, "Open","","")
@@ -459,6 +503,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.applyCalibE = True
         # calibFile.close()
     def saveSpectraOne(self):
+        self.stopWorker()
         self.serialcomm.write('on'.encode())
         self.ui.lineEdit_2.setText("Radiance saving")
         time.sleep(2)
@@ -638,6 +683,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.reference_plots[8].set_ydata(reflectance[min(wAB):max(wAB)])
         self.canvases[8].draw()
     def saveSpectra4(self):
+        self.stopWorker()
         intensityL_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
         intensityE_temp_buffer = np.empty([len(self.wavelength), self.intensity_buffersize])
         intenstiyE_temp_time_buffer = []
@@ -951,8 +997,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.ui.lineEdit_2.setText("Initialization failed, please connect a device")
             self.spec = sb.Spectrometer(devices[0])
             self.device_list.append(self.spec.model)
-            self.serialcomm = serial.Serial(port,9600)
-            self.serialcomm.timeout = 1
+            # self.serialcomm = serial.Serial(port,9600)
+            # self.serialcomm.timeout = 1
             # self.serialcomm.write('on'.encode())
             self.ui.comboBox_2.addItems(self.device_list)
             self.ui.comboBox_2.setCurrentIndex(0)
@@ -990,7 +1036,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.wavelength = self.spec.wavelengths()
             ####### default measurement #######
             self.isIntTimeChanged = False
-            
+            self.a_L = None
+            self.a_E = None
+            self.b_L = None
+            self.b_E = None
             self.BothFibreMode()
             self.setSpecIntTime()
             self.setScansToAvg()
@@ -1033,7 +1082,14 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.ui.lineEdit_4.setText("Current channel: Irradiance (E).")
                 self.ui.lineEdit_4.setEnabled(False)
-            self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
+            
+            if self.comboBox.currentIndex() == 0:
+                self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
+            elif self.comboBox.currentIndex() == 1:
+                self.ui.lineEdit_5.setText("Current fibre channel: L. Number of Meas: " + str(self.intensity_buffersize))
+            else:
+                self.ui.lineEdit_5.setText("Current fibre channel: E. Number of Meas: " + str(self.intensity_buffersize))
+
             self.backgroundIntensity = [0] * len(self.wavelength)
             self.reflectance = [0] * len(self.wavelength)
             self.Eout_avg = 0
@@ -1054,11 +1110,28 @@ class MainWindow(QtWidgets.QMainWindow):
             # self.backgroundIntensity_E = [0] * len(self.wavelength)
             self.calib_file_name_L = self.spec.model + '_' + 'L_coeff.cal'
             self.calib_file_name_E = self.spec.model + '_' + 'E_coeff.cal'
-            # self.calib_file_name_E = [0.5] * len(self.wavelength)
-            self.calibCoeff_L = self.read_calib_file(self.calib_file_name_L)
-            self.calibCoeff_E = self.read_calib_file(self.calib_file_name_E)
-            self.applyCalibL = True
-            self.applyCalibE = True
+            if (os.path.exists(self.calib_file_name_L) and os.path.exists(self.calib_file_name_E)):
+                # self.calib_file_name_E = [0.5] * len(self.wavelength)
+                # need to make sure the file exists
+                self.calibCoeff_L = self.read_calib_file(self.calib_file_name_L)
+                self.calibCoeff_E = self.read_calib_file(self.calib_file_name_E)
+                self.applyCalibL = True
+                self.applyCalibE = True
+            else:
+                # need to put an array of constant here
+                self.calibCoeff_L = np.ones(np.shape(self.spec.wavelengths))
+                self.calibCoeff_E = np.ones(np.shape(self.spec.wavelengths))
+            self.calib_coeff_file_name_E = self.spec.model + '_calibration_coefficients.csv'
+            self.calib_coeff_file_name_L = self.calib_coeff_file_name_E
+        
+            if (os.path.exists(self.calib_coeff_file_name_L)):
+                a, b = self.read_calib_coeff_file(self.calib_coeff_file_name_L)
+                self.calibCoeff_L = self.calc_calib_coeff(self.wavelength, a, b, self.int_time_L)
+                self.calibCoeff_E = self.calc_calib_coeff(self.wavelength, a, b, self.int_time_E)
+                self.a_L = a
+                self.a_E = a
+                self.b_L = b 
+                self.b_E = b 
             # self.calibCoeff_E = self.calibCoeff_L
             self.isStopped = True
             self.saveData = False
@@ -1080,6 +1153,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.pushButton_5.setEnabled(True)
             self.ui.pushButton_18.setEnabled(True)
             self.ui.pushButton_19.setEnabled(True)
+            self.ui.pushButton_17.setEnabled(True)
             # self.ui.pushButton_20.setEnabled(True)           
             ########## results calculation #########
             # In @ 687
@@ -1155,8 +1229,15 @@ class MainWindow(QtWidgets.QMainWindow):
         # prev_buffer_size = self.intensity_buffersize
         # curr_buffer_size = self.ui.spinBox_3.value()
         self.intensity_buffersize = self.ui.spinBox_3.value()
-        self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
+        if self.comboBox.currentIndex() == 0:
+            self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
+        elif self.comboBox.currentIndex() == 1:
+            self.ui.lineEdit_5.setText("Current fibre channel: L. Number of Meas: " + str(self.intensity_buffersize))
+        else:
+            self.ui.lineEdit_5.setText("Current fibre channel: E. Number of Mease: " + str(self.intensity_buffersize))
         self.ui.lineEdit_5.setEnabled(False)
+
+
         # if prev_buffer_size > curr_buffer_size:
         #     for i in range(0, (prev_buffer_size - curr_buffer_size)):
         #         self.intensity_L_queue.pop(0)
@@ -1204,7 +1285,12 @@ class MainWindow(QtWidgets.QMainWindow):
             #time.sleep(0.5)
             #self.progressBar.setValue(x/3*100)
         # sb.setIntegrationTime(time)
-        
+        if self.if_L:
+            if self.a_L is not None and self.b_L is not None:
+                self.calibCoeff_L = self.calc_calib_coeff(self.wavelength, self.a_L, self.b_L, self.int_time_L)
+        else:
+            if self.a_E is not None and self.b_E is not None:
+                self.calibCoeff_E = self.calc_calib_coeff(self.wavelength, self.a_E, self.b_E, self.int_time_E)
         # self.spec.integration_time_micros(time)
         if self.if_L:
             self.ui.lineEdit_2.setText("Integration time (L) has been set to "+ str(self.ui.spinBox.value()) + " ms")
@@ -1237,8 +1323,104 @@ class MainWindow(QtWidgets.QMainWindow):
         
        
         # print(scans)
-
+    def setFibreMode(self):
+        currentIndex = self.ui.comboBox.currentIndex()
+        if currentIndex == 0:
+            self.BothFibreMode()
+            self.ui.lineEdit_5.setText("Number of Meas: " + str(self.intensity_buffersize) + " (L), " + str(self.intensity_buffersize) + " (E).")
+        elif currentIndex == 1:
+            self.LOnlyFibreMode()
+            self.ui.lineEdit_5.setText("Current fibre channel: L. Number of Meas: " + str(self.intensity_buffersize))
+        else:
+            self.EOnlyFibreMode()
+            self.ui.lineEdit_5.setText("Current fibre channel: E. Number of Meas: " + str(self.intensity_buffersize))
+            
     def EOnlyFibreMode(self):
+        # if self.ui.checkBox.isChecked():
+        self.ui.checkBox_2.setEnabled(False)
+        self.ui.lineEdit_4.setText("Current channel: Radiance (E).")
+        self.ui.lineEdit_4.setEnabled(False)
+        self.ui.pushButton_12.setEnabled(False)
+        self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_9.setEnabled(True)
+        self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_14.setEnabled(False)
+        self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_13.setEnabled(True)
+        self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.if_L = False
+        self.serialcomm.write("off".encode())
+        # else:
+        #     self.ui.checkBox_4.setEnabled(True)
+        #     self.ui.checkBox_3.setEnabled(True)
+        #     self.ui.pushButton_12.setEnabled(False)
+        #     self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_9.setEnabled(False)
+        #     self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_14.setEnabled(False)
+        #     self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_13.setEnabled(False)
+        #     self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+    def LOnlyFibreMode(self):
+        # if self.ui.checkBox_3.isChecked():
+        self.ui.checkBox_2.setEnabled(False)
+        self.ui.lineEdit_4.setText("Current channel: Irradiance (E).")
+        self.ui.lineEdit_4.setEnabled(False)
+        # self.ui.checkBox.setEnabled(False)
+        # self.ui.checkBox_4.setEnabled(False)
+        self.ui.pushButton_12.setEnabled(True)
+        self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_9.setEnabled(False)
+        self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_14.setEnabled(True)
+        self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_13.setEnabled(False)
+        self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.if_L = True
+        self.serialcomm.write("on".encode())
+        # else:
+        #     self.ui.checkBox.setEnabled(True)
+        #     self.ui.checkBox_4.setEnabled(True)
+        #     self.ui.pushButton_12.setEnabled(False)
+        #     self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_9.setEnabled(False)
+        #     self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_14.setEnabled(False)
+        #     self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_13.setEnabled(False)
+        #     self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+    def BothFibreMode(self):
+        # if self.ui.checkBox_4.isChecked():
+        self.ui.checkBox_2.setEnabled(True)
+        # self.ui.checkBox.setEnabled(False)
+        # self.ui.checkBox_3.setEnabled(False)
+        self.ui.pushButton_12.setEnabled(True)
+        self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_9.setEnabled(True)
+        self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_14.setEnabled(True)
+        self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        self.ui.pushButton_13.setEnabled(True)
+        self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        if self.ui.checkBox_2.isChecked():
+            # i = 'off'
+            self.if_L = False
+        else:
+            # i = 'on'
+            self.if_L = True
+        # else:
+        #     self.ui.checkBox.setEnabled(True)
+        #     self.ui.checkBox_3.setEnabled(True)
+        #     self.ui.pushButton_12.setEnabled(False)
+        #     self.ui.pushButton_12.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_9.setEnabled(False)
+        #     self.ui.pushButton_9.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_14.setEnabled(False)
+        #     self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+        #     self.ui.pushButton_13.setEnabled(False)
+        #     self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
+    
+    def EOnlyFibreMode2(self):
         if self.ui.checkBox.isChecked():
             self.ui.checkBox_2.setEnabled(False)
             self.ui.checkBox_4.setEnabled(False)
@@ -1264,7 +1446,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(False)
             self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
-    def LOnlyFibreMode(self):
+    def LOnlyFibreMode2(self):
         if self.ui.checkBox_3.isChecked():
             self.ui.checkBox_2.setEnabled(False)
             self.ui.checkBox.setEnabled(False)
@@ -1290,7 +1472,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.pushButton_14.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
             self.ui.pushButton_13.setEnabled(False)
             self.ui.pushButton_13.setStyleSheet("QPushButton {background-color: rgb(255,255,255)}")
-    def BothFibreMode(self):
+    def BothFibreMode2(self):
         if self.ui.checkBox_4.isChecked():
             self.ui.checkBox_2.setEnabled(True)
             self.ui.checkBox.setEnabled(False)
